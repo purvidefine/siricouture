@@ -12,6 +12,8 @@
  * they still owe.
  */
 
+import Image from 'next/image';
+
 import { Buti } from './Motif';
 
 interface FrameProps {
@@ -27,6 +29,13 @@ interface FrameProps {
   seed?: number;
   /** Larger motif and label, for hero-scale slots. */
   feature?: boolean;
+  /**
+   * How wide this slot renders, so next/image can pick a source width. The
+   * default suits a card in a three-up grid; hero and detail slots pass their own.
+   */
+  sizes?: string;
+  /** Skip lazy-loading — for the one image above the fold. */
+  priority?: boolean;
 }
 
 export default function Frame({
@@ -38,12 +47,20 @@ export default function Frame({
   className = '',
   seed = 3,
   feature = false,
+  sizes = '(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 33vw',
+  priority = false,
 }: FrameProps) {
   if (src) {
-    // eslint-disable-next-line @next/next/no-img-element
     return (
       <div className={`frame ${className}`} style={{ aspectRatio: ratio }}>
-        <img className="frame__img" src={src} alt={alt} loading="lazy" />
+        <Image
+          className="frame__img"
+          src={src}
+          alt={alt}
+          fill
+          sizes={sizes}
+          priority={priority}
+        />
       </div>
     );
   }

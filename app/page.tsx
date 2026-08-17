@@ -50,6 +50,8 @@ export default function Home() {
             ratio="3/4"
             seed={2}
             feature
+            priority
+            sizes="(max-width: 700px) 100vw, 44vw"
             src={hero.images[1]}
             alt="Gulbahar — fuchsia organza kurta set"
           />
