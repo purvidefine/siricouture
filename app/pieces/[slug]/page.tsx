@@ -39,12 +39,28 @@ export default function PiecePage({ params }: { params: { slug: string } }) {
     <>
       <article className="piece">
         <div className="piece__gallery">
-          <Frame tint={piece.tint} ratio="3/4" seed={3} feature label={`${piece.name} — full length`} />
-          <div className="piece__thumbs">
-            <Frame tint={piece.tint} ratio="1/1" seed={11} label="Detail — yoke" />
-            <Frame tint={piece.tint} ratio="1/1" seed={19} label="Detail — hem" />
-            <Frame tint={piece.tint} ratio="1/1" seed={27} label="On the body" />
-          </div>
+          <Frame
+            tint={piece.tint}
+            ratio="3/4"
+            seed={3}
+            feature
+            src={piece.images[0]}
+            alt={`${piece.name} — ${piece.type}`}
+          />
+          {piece.images.length > 1 && (
+            <div className="piece__thumbs">
+              {piece.images.slice(1).map((src, i) => (
+                <Frame
+                  key={src}
+                  tint={piece.tint}
+                  ratio="3/4"
+                  seed={11 + i * 8}
+                  src={src}
+                  alt={`${piece.name}, view ${i + 2}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="piece__info">
@@ -101,6 +117,19 @@ export default function PiecePage({ params }: { params: { slug: string } }) {
                 );
               })}
             </ul>
+
+            <div className="piece__macros">
+              {piece.techniques.map((t) => (
+                <figure key={t}>
+                  <Frame
+                    ratio="1/1"
+                    src={TECHNIQUE_BY_ID[t].image}
+                    alt={`${TECHNIQUE_BY_ID[t].name} on a Siri Couture piece`}
+                  />
+                  <figcaption>{TECHNIQUE_BY_ID[t].local}</figcaption>
+                </figure>
+              ))}
+            </div>
           </section>
 
           <div className="piece__actions">

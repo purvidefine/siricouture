@@ -632,23 +632,19 @@ a {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  gap: 1px;
-  background: var(--line);
-  border: 1px solid var(--line);
+  gap: 0.6rem;
 }
 
 .collection {
   position: relative;
   display: block;
-  background: var(--ivory);
-  padding: 1.8rem 1.6rem 2.2rem;
+  background: var(--paper);
   text-decoration: none;
-  min-height: 11rem;
   transition: background 0.28s;
 }
 
 .collection:hover {
-  background: var(--paper);
+  background: var(--sand);
 }
 
 .collection__dot {
@@ -1313,5 +1309,152 @@ a {
   *::after {
     transition-duration: 0.001ms !important;
     animation-duration: 0.001ms !important;
+  }
+}
+
+/* ------------------------------------------------- real photography blocks */
+
+/*
+ * Added when the studio's own photographs replaced the placeholders. The images
+ * are frame-grabs from her Instagram and are low-resolution, so nothing here
+ * displays them larger than about 480px wide — beyond that the softness shows.
+ */
+
+.lookbook {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.6rem;
+}
+
+.lookbook__item {
+  position: relative;
+  display: block;
+  text-decoration: none;
+  overflow: hidden;
+}
+
+.lookbook__item .frame {
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lookbook__item:hover .frame {
+  transform: scale(1.035);
+}
+
+.lookbook__cap {
+  position: absolute;
+  left: 0.7rem;
+  bottom: 0.7rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ivory);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.lookbook__item:hover .lookbook__cap {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* a plain horizontal run of photographs */
+.strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(9.5rem, 1fr);
+  gap: 0.6rem;
+  overflow-x: auto;
+  padding-bottom: 0.6rem;
+  scrollbar-width: thin;
+}
+
+/* technique cards on the home page now lead with a macro */
+.technique__img {
+  margin-bottom: 0.9rem;
+}
+
+/* collection cards are photographs now, not empty tiles */
+.collection {
+  padding: 0;
+  min-height: 0;
+}
+
+.collection__img {
+  margin-bottom: 0.9rem;
+}
+
+.collection__name,
+.collection__line {
+  padding: 0 1.1rem;
+}
+
+.collection__name {
+  padding-top: 0.2rem;
+}
+
+.collection__line {
+  padding-bottom: 1.2rem;
+}
+
+.collection__buti {
+  right: 0.7rem;
+  bottom: 0.6rem;
+}
+
+/* the handwork page shows every piece worked in each technique */
+.technique-block__uses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 1.6rem;
+}
+
+.mini {
+  display: block;
+  width: 5.4rem;
+  text-decoration: none;
+}
+
+.mini span {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* macros of the handwork named on a piece */
+.piece__macros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5rem, 1fr));
+  gap: 0.6rem;
+  margin-top: 1.4rem;
+}
+
+.piece__macros figure {
+  margin: 0;
+}
+
+.piece__macros figcaption {
+  margin-top: 0.4rem;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.82rem;
+  color: var(--zari);
+  text-align: center;
+}
+
+/* the piece gallery holds up to five extra views */
+.piece__thumbs {
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+}
+
+@media (max-width: 760px) {
+  .lookbook {
+    grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
   }
 }

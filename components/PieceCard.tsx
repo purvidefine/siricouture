@@ -17,7 +17,8 @@ export default function PieceCard({ piece, index = 0 }: { piece: Piece; index?: 
         tint={piece.tint}
         ratio={piece.ratio}
         seed={index * 7 + 3}
-        label={`${piece.name} — ${piece.type}`}
+        src={piece.images[0]}
+        alt={`${piece.name} — ${piece.type} in ${piece.colour}`}
       />
 
       <div className="card__body">

@@ -63,6 +63,15 @@ export default function HandworkPage() {
               </dl>
 
               <StitchRule width={360} seed={i * 11 + 4} className="technique-block__rule" />
+
+              <div className="technique-block__uses">
+                {used.map((p) => (
+                  <Link key={p.slug} href={`/pieces/${p.slug}`} className="mini">
+                    <Frame ratio="3/4" src={p.images[0]} alt={p.name} tint={p.tint} />
+                    <span>{p.name}</span>
+                  </Link>
+                ))}
+              </div>
             </div>
 
             <div className="technique-block__art">
@@ -70,7 +79,8 @@ export default function HandworkPage() {
                 tint={['#C8407E', '#D9AE3B', '#B08D4F', '#54459B', '#EFE7D8'][i]}
                 ratio="4/5"
                 seed={i * 6 + 1}
-                label={`Macro — ${t.name.toLowerCase()} in progress`}
+                src={t.image}
+                alt={`${t.name} on a Siri Couture piece`}
               />
               <div className="technique-block__motif" aria-hidden="true">
                 {t.id === 'shisha' ? (

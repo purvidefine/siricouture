@@ -11,10 +11,12 @@ import Frame from '@/components/Frame';
 import PieceCard from '@/components/PieceCard';
 import { Buti, Scallop, StitchRule, Vine } from '@/components/Motif';
 import { enquiryHref } from '@/lib/enquiry';
-import { COLLECTIONS, PIECES, TECHNIQUES } from '@/lib/catalogue';
+import { ALL_IMAGES, COLLECTIONS, PIECES, TECHNIQUES, pieceBySlug } from '@/lib/catalogue';
 
 export default function Home() {
-  const featured = PIECES.slice(0, 4);
+  const featured = PIECES;
+  const hero = pieceBySlug('gulbahar')!;
+  const heroInset = pieceBySlug('citrine')!;
 
   return (
     <>
@@ -43,8 +45,22 @@ export default function Home() {
         </div>
 
         <div className="hero__images">
-          <Frame tint="#C8407E" ratio="3/4" seed={2} feature label="Hero — Gulbahar, full length" />
-          <Frame tint="#D9AE3B" ratio="4/5" seed={8} label="Detail — citrine hem, mirror work" className="hero__inset" />
+          <Frame
+            tint={hero.tint}
+            ratio="3/4"
+            seed={2}
+            feature
+            src={hero.images[1]}
+            alt="Gulbahar — fuchsia organza kurta set"
+          />
+          <Frame
+            tint={heroInset.tint}
+            ratio="3/4"
+            seed={8}
+            src={heroInset.images[0]}
+            alt="Citrine — mirror-worked lehenga hem"
+            className="hero__inset"
+          />
         </div>
       </section>
 
@@ -64,6 +80,7 @@ export default function Home() {
         <ul className="techniques">
           {TECHNIQUES.map((t, i) => (
             <li key={t.id} className="technique">
+              <Frame ratio="1/1" src={t.image} alt={`${t.name} detail`} className="technique__img" />
               <span className="technique__local">{t.local}</span>
               <h3 className="technique__name">{t.name}</h3>
               <p className="technique__line">{t.line}</p>
@@ -90,16 +107,27 @@ export default function Home() {
         </div>
 
         <ul className="collections">
-          {COLLECTIONS.map((c, i) => (
-            <li key={c.slug}>
-              <Link href={`/collections#${c.slug}`} className="collection">
-                <span className="collection__dot" style={{ background: c.tint }} aria-hidden="true" />
-                <span className="collection__name">{c.name}</span>
-                <span className="collection__line">{c.line}</span>
-                <Buti size={40} seed={i * 5 + 1} className="collection__buti" showCentre={false} />
-              </Link>
-            </li>
-          ))}
+          {COLLECTIONS.map((c, i) => {
+            const cover = PIECES.find((p) => p.collection === c.name);
+            return (
+              <li key={c.slug}>
+                <Link href={`/collections#${c.slug}`} className="collection">
+                  {cover && (
+                    <Frame
+                      ratio="3/4"
+                      src={cover.images[0]}
+                      alt={c.name}
+                      tint={c.tint}
+                      className="collection__img"
+                    />
+                  )}
+                  <span className="collection__name">{c.name}</span>
+                  <span className="collection__line">{c.line}</span>
+                  <Buti size={34} seed={i * 5 + 1} className="collection__buti" showCentre={false} />
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </section>
 
@@ -116,6 +144,30 @@ export default function Home() {
       </section>
 
       <StitchRule width={1400} className="section-rule" seed={55} />
+
+      {/* ------------------------------------------------------ lookbook */}
+      <section className="section">
+        <div className="section__head section__head--row">
+          <h2 className="section__title">The lookbook</h2>
+          <p className="section__lead">
+            Every piece, photographed as it was worn. Handwork is easier to believe at this size.
+          </p>
+        </div>
+        <div className="lookbook">
+          {ALL_IMAGES.map(({ src, piece }) => (
+            <Link
+              key={src}
+              href={`/pieces/${piece.slug}`}
+              className="lookbook__item"
+            >
+              <Frame ratio="3/4" src={src} alt={`${piece.name} — ${piece.type}`} tint={piece.tint} />
+              <span className="lookbook__cap">{piece.name}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <Vine width={1000} className="section-vine" seed={63} />
 
       {/* ---------------------------------------------------- commission */}
       <section className="section commission-cta">
@@ -134,7 +186,13 @@ export default function Home() {
             Start a commission
           </a>
         </div>
-        <Frame tint="#B7A3D6" ratio="4/5" seed={14} label="Studio — hands at work on a panel" />
+        <Frame
+          tint="#B7A3D6"
+          ratio="4/5"
+          seed={14}
+          src={ALL_IMAGES[ALL_IMAGES.length - 3].src}
+          alt="A finished piece from the studio"
+        />
       </section>
     </>
   );

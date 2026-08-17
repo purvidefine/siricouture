@@ -92,15 +92,21 @@ be serialised.
    commission page and the form shows the message it composed instead of sending.
    Nothing is dead, but nothing reaches her either.
 
-2. **Supply photography.** Every image slot renders `<Frame>` — a correctly
-   proportioned block tinted with the piece's own colour, carrying a buti and a
-   label naming the shot that belongs there. Swapping in a real photograph is one
-   prop (`src`) per slot and the layout will not move. The reference material
-   available was a 852×480 screen recording, far too low-res to use.
+2. **Replace the photography.** The site now runs on **real photographs of her
+   garments**, recovered frame-by-frame from the reference recording of her
+   Instagram and upscaled — 15 product shots plus 5 handwork macros in
+   `public/images/`. They are genuinely her pieces, which is why they are here
+   rather than placeholders, but they came from an 852×480 screen capture and are
+   soft. Nothing displays larger than ~480px wide for that reason. **Swap in the
+   originals**: replace the files in `public/images/pieces/` and
+   `public/images/handwork/` keeping the same names, and nothing else changes.
+   Slots without a real photograph (the studio interior, the shopfront) still
+   render the labelled placeholder.
 
-3. **Confirm the catalogue.** `lib/catalogue.ts` models eight pieces across six
-   collections from her feed. Names, colours, fabrics and handwork should be
-   checked against what she actually has.
+3. **Confirm the catalogue.** `lib/catalogue.ts` carries six pieces — Gulbahar,
+   Citrine, Violet, Marigold, The Florals, Coral — one for each garment that
+   could actually be seen in the reference. Names, fabrics and handwork are
+   inferred and should be checked. Add the rest of her range with real photographs.
 
 4. **Confirm the technique list.** Five are listed because five are visible in her
    work. Aari, gota patti and beadwork are deliberately **absent** — she has not

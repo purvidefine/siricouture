@@ -3,6 +3,7 @@ import Frame from '@/components/Frame';
 import { Buti, Scallop, StitchRule, Vine } from '@/components/Motif';
 import { enquiryHref } from '@/lib/enquiry';
 import { BRAND } from '@/lib/brand';
+import { ALL_IMAGES } from '@/lib/catalogue';
 
 export const metadata: Metadata = {
   title: 'Atelier',
@@ -36,7 +37,14 @@ export default function AtelierPage() {
       </header>
 
       <section className="atelier">
-        <Frame tint="#E5DCCE" ratio="4/5" seed={5} feature label="The studio — worktable and frames" />
+        <Frame
+          tint="#E5DCCE"
+          ratio="4/5"
+          seed={5}
+          feature
+          src={ALL_IMAGES[2].src}
+          alt="Hand-embroidered detail on an organza dupatta"
+        />
         <div className="atelier__text">
           <h2 className="section__title">Slow fashion, in hours</h2>
           <p className="section__lead">
@@ -113,6 +121,17 @@ export default function AtelierPage() {
           </a>
         </div>
         <Frame tint="#C8407E" ratio="1/1" seed={16} label="Shopfront — Navkar City Centre" />
+      </section>
+
+      <section className="section">
+        <div className="section__head section__head--row">
+          <h2 className="section__title">Out of the studio</h2>
+        </div>
+        <div className="strip">
+          {ALL_IMAGES.map(({ src, piece }) => (
+            <Frame key={src} ratio="3/4" src={src} alt={piece.name} tint={piece.tint} />
+          ))}
+        </div>
       </section>
     </>
   );
