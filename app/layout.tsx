@@ -1,30 +1,41 @@
 import type { Metadata, Viewport } from 'next';
+import { Footer, Nav } from '@/components/Chrome';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Siri Couture — Made by hand. Made for you.',
+  metadataBase: new URL('https://siri-couture.vercel.app'),
+  title: {
+    default: 'Siri Couture — Ethereal pieces, handcrafted',
+    template: '%s · Siri Couture',
+  },
   description:
-    'A contemporary Indian couture atelier in Bhilwara. Watch a piece of cloth become a garment, one hand-made stitch at a time.',
+    'Modern Indian occasion wear, hand-embroidered in Bhilwara. Thread work, mirror work and zari on organza, chanderi and silk — made to your measurements.',
   openGraph: {
-    title: 'Siri Couture — Made by hand. Made for you.',
+    title: 'Siri Couture — Ethereal pieces, handcrafted',
     description:
-      'A contemporary Indian couture atelier in Bhilwara. Watch a piece of cloth become a garment, one hand-made stitch at a time.',
+      'Modern Indian occasion wear, hand-embroidered in Bhilwara. Slow fashion, stitched in sunshine.',
     type: 'website',
+    locale: 'en_IN',
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0e0c0a',
+  themeColor: '#FBF8F3',
   width: 'device-width',
   initialScale: 1,
-  // the experience is scroll-driven; pinch-zoom stays available for accessibility
-  maximumScale: 5,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <a className="skip" href="#main">
+          Skip to content
+        </a>
+        <Nav />
+        <main id="main">{children}</main>
+        <Footer />
+      </body>
     </html>
   );
 }

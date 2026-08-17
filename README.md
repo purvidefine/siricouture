@@ -1,14 +1,9 @@
-# Siri Couture — *Made by hand. Made for you.*
+# Siri Couture
 
-A scroll-driven 3D atelier experience for a contemporary Indian couture label in
-Bhilwara. The visitor watches a length of handloom cotton become a garment, one
-stitch at a time.
+Website for [@_siricouture](https://www.instagram.com/_siricouture/) — a hand-embroidery
+studio in Bhilwara, Rajasthan making modern Indian occasion wear.
 
-```
-THREAD → STITCH → MOTIF → HAND → PIECE → GARMENT → WOMAN
-```
-
-Next.js 14 (App Router) · React Three Fiber · three.js · Lenis.
+Next.js 14 (App Router) · TypeScript · no runtime dependencies beyond React.
 
 ```bash
 npm install
@@ -17,132 +12,108 @@ npm run dev     # http://localhost:3000
 
 ---
 
-## The central decision: everything is generated, nothing is downloaded
+## What this is
 
-There are no `.glb` models, no scanned fabric maps, no photographs and no audio
-files in this repository. Every surface, every length of thread and every sound
-is produced in code at runtime. That was originally a constraint of the build
-environment, but it turned out to serve the brief: procedural cloth can be built
-as an *actual weave* rather than a photograph of one, which is what allows the
-camera to sit two centimetres off the surface without falling apart.
+A **catalogue-and-commission** site, not a shop. Her clients come to have handwork
+done, and occasion wear at this price point does not convert in a cart, so every
+action on the site leads to a conversation — pre-filled and handed to WhatsApp,
+where she already talks to her customers.
 
-| Element | How it is made |
-|---|---|
-| Cloth | Plain weave height field — warp and weft interlacing on a checkerboard, with per-thread gauge variation (slub). Sobel-filtered into a normal map. `lib/textures.ts` |
-| Thread | Real tube geometry per stitch, merged into one buffer per thread type. `lib/stitchGeometry.ts` |
-| Needle | Lathed steel profile with a real eye. `components/scene/Needle.tsx` |
-| Motif | Generated stitch-by-stitch from motif geometry, not drawn as a pattern. `lib/craft.ts` |
-| Sound | Web Audio: filtered pink-noise transients for the pierce, the pull, the cloth. `lib/audio.ts` |
-| Environment | Canvas-drawn equirect passed through PMREM. `makeAtelierEnv()` |
+Pages: home, collections, piece detail, **The Handwork**, atelier, commission.
 
-## Authenticity notes
+## Positioning — read this before changing copy
 
-**The motif is a *buti*** — the small floral sprig that is the backbone of
-Rajasthani hand embroidery. One stem, two leaves, a five-petal flower, a scatter
-of seed stitches. No mandalas, no paisley, no peacocks, no borders, no palace
-architecture. It is worked in the order an artisan actually works it: stem in
-back stitch, then leaves in satin, then petals, then the zari knots at the
-centre last and tightest. The scroll reveal follows that order exactly.
+This is **not** a bridal-lehenga house, and an earlier version of this project went
+wrong by assuming it was. Read from her own captions and grid:
 
-**Nothing is symmetrical.** Stitch length wanders by about a tenth, the needle
-lands slightly off the drawn line, satin stitches overshoot their edge unevenly,
-and thread tension varies per stitch. All of it is seeded (`buildButi(20240817)`)
-so the piece is identical on every visit — a finished garment does not re-stitch
-itself between viewings — but never machine-regular.
+- Modern Indian occasion wear — kurta sets, suit sets, lehengas, anarkalis, dresses
+- The wedding **guest**, the bridesmaid, the trousseau, the festive edit
+- Sorbet palette, explicitly against the traditional register: *"Forget the
+  traditional reds and golds for a moment, we're making a case for the Sorbet Suite."*
+- Voice: short, observational, first-person plural. Never salesy.
+- ~1,950 followers, 188 posts, ~11–14 likes a post
 
-**The cloth is dragged by the work.** Three deformations run in the cloth's
-vertex shader: resting folds, a live compression dimple under the needle, and
-permanent pucker at every stitch already pulled tight. The third is the one that
-matters — embroidery that leaves its ground undisturbed reads as a decal.
+The palette in `lib/brand.ts` is sampled from her own photography, not chosen.
 
-**The reverse is modelled.** Carry threads run under the cloth from one stitch's
-exit to the next stitch's entry, duller and slacker than the face.
+## Handwork everywhere
 
-**One shared source of truth.** `computeNeedleState()` drives the needle mesh
-*and* the cloth's dimple *and* the hand *and* the sound triggers, so the
-compression in the weave is always exactly under the point of the needle.
+The brief was to show authentic handwork throughout. Rather than decorating with
+generic Indian ornament — arches, paisley, peacocks, mandalas — **every
+decorative element on this site is a generated embroidery structure** (`lib/motifs.ts`):
 
-## Scale
+| Motif | What it actually is | Where it appears |
+|---|---|---|
+| `runningStitch` | Individual stitches along a line | Every section rule, nav, footer |
+| `buti` | Floral sprig: back-stitched stem, satin leaves and petals, knotted centre | Nav mark, section heads, image placeholders |
+| `scallopBorder` | Gota/sequin scalloped hem with anchor points | Under headings and hero |
+| `shisha` | A mirror held by its ring of anchor stitches | Mirror-work section |
+| `vine` | Running floral border, satin leaves and buds | Major section dividers |
 
-One world unit ≈ 20cm. The sample panel is 0.66 units (~13cm, hoop-sized), the
-buti spans 0.22 units (~4.4cm), floss is ~0.4mm, and the opening shot frames
-about 1.4cm of cloth. Thread gauge and stitch height are authored in world units
-and deliberately *not* scaled with the motif, because floss thickness is a
-property of the thread.
+Two rules make these read as handwork rather than clip-art: stitches are drawn as
+**individual segments** rather than a repeating dash pattern, and every length,
+gap and position carries a **seeded wobble** — so no two stitches match, but the
+same seed always draws the same motif and nothing shimmers between renders.
+
+Beyond decoration, the handwork is *named*: every piece lists its techniques with
+the local term (Resham, Shisha, Zari, Sitara) and the real hours each takes. That
+is the argument for the price and the lead time.
 
 ## Structure
 
 ```
-app/                     shell, global styles
+app/
+  page.tsx                 home
+  collections/             the catalogue, grouped by collection
+  pieces/[slug]/           piece detail — spec, handwork, enquiry
+  handwork/                the five techniques, at length
+  atelier/                 studio, lead times, visiting
+  commission/              the enquiry flow (client component)
 components/
-  Experience.tsx         scroll harness — writes progress to a ref, never state
-  scene/
-    Scene.tsx            composition; <Driver> writes the frame bus first
-    Cloth.tsx  Stitches.tsx  Needle.tsx  Hand.tsx  Garment.tsx  Atelier.tsx
-  ui/                    Overlay, Chrome, Loader, CreateYourSiri, NoScript
+  Motif.tsx                the drawn handwork
+  Frame.tsx                image placeholder
+  PieceCard.tsx  Chrome.tsx
 lib/
-  craft.ts               motif + stitch generation (the "brain")
-  chapters.ts            the scroll score and camera keyframes
-  live.ts                per-frame state bus
-  needleMotion.ts        the mechanics of one stitch
-  stitchGeometry.ts      stitches → merged tube geometry
-  textures.ts            weave, floss, environment
-  handTexture.ts         the artisan's hand
-  audio.ts  quality.ts
+  brand.ts                 observed brand facts + palette
+  motifs.ts                embroidery geometry -> SVG
+  catalogue.ts             collections, pieces, techniques
+  enquiry.ts               WhatsApp deep links
 ```
 
-**Scroll never re-renders React.** Progress is written to a ref; each scene
-component reads the shared `LiveState` inside its own `useFrame`. `<Driver>` is
-mounted first so it always writes before its siblings read.
-
-**Reveal happens in the vertex shader.** Each vertex carries `aIndex` (global
-make-order) and `aT` (position along its stitch). The stitch under the needle
-grows along its own length rather than popping in. Geometry is never rebuilt
-while scrolling.
-
-## Performance and access
-
-Three quality tiers are chosen at runtime from pointer type, viewport,
-`hardwareConcurrency` and `deviceMemory` (`lib/quality.ts`). Mobile keeps all
-seven chapters and the same motif; it loses geometry density, texture resolution
-and the reverse-side carries. `prefers-reduced-motion` disables smooth scrolling
-and hard-damps the camera. Sound is off until asked for. Without JavaScript the
-seven movements render as text and the commission copy still works.
+`lib/enquiry.ts` is deliberately outside any `'use client'` module — server
+components import it, and a function exported across the client boundary cannot
+be serialised.
 
 ---
 
-## Known gaps — read before showing a client
+## Before this goes live
 
-These are honest limitations, not oversights.
+1. **Set the WhatsApp number** in `lib/brand.ts` (`BRAND.whatsapp`, digits only,
+   with country code). Until it is set, every enquiry CTA falls back to the
+   commission page and the form shows the message it composed instead of sending.
+   Nothing is dead, but nothing reaches her either.
 
-1. **The hand is a soft out-of-focus mass, not a modelled hand.** No photoscanned
-   hand was available, and a procedural one would have landed exactly on the
-   failure the brief warns about — plastic skin, mannequin fingers. It is
-   therefore treated the way a 100mm macro at f/2.8 actually treats it: the pinch
-   of thumb against forefinger reads, the rest falls away. **Replacing this with
-   a real hand scan is the single highest-value upgrade.**
+2. **Supply photography.** Every image slot renders `<Frame>` — a correctly
+   proportioned block tinted with the piece's own colour, carrying a buti and a
+   label naming the shot that belongs there. Swapping in a real photograph is one
+   prop (`src`) per slot and the layout will not move. The reference material
+   available was a 852×480 screen recording, far too low-res to use.
 
-2. **The wearer is handled the same way** — a soft mass above the garment. Should
-   be replaced with Siri Couture's own editorial photography or video.
+3. **Confirm the catalogue.** `lib/catalogue.ts` models eight pieces across six
+   collections from her feed. Names, colours, fabrics and handwork should be
+   checked against what she actually has.
 
-3. **The garment is parametric,** not a cut pattern. It has shoulders, a waist
-   and real hem folds, but it is a suggestion of a silhouette. A proper GLB of an
-   actual Siri Couture piece would transform the last two chapters.
+4. **Confirm the technique list.** Five are listed because five are visible in her
+   work. Aari, gota patti and beadwork are deliberately **absent** — she has not
+   confirmed working in them, and the brief was explicit that traditions must not
+   be combined speculatively. Add them only on her word.
 
-4. **No depth-of-field pass.** Near-field thread is dissolved in-shader to
-   approximate defocus. A real DOF pass (`postprocessing`) would do this properly
-   and is the second-highest-value upgrade.
+5. **Check the lead times and hours.** The figures on `/handwork` and `/atelier`
+   ("6–14 hours a panel", "four to eight weeks") are plausible for this work but
+   were not supplied by the studio. They are load-bearing claims — verify them.
 
-5. **The craft is thread embroidery only.** Gota, mirror work, aari and
-   beadwork are scaffolded in the palette and stitch-kind system but not built,
-   because *which techniques Siri Couture genuinely works with was never
-   confirmed.* Do not add them speculatively — the brief is explicit that
-   traditions must not be randomly combined. Confirm with the studio first, then
-   each becomes a new craft chapter with its own material, sound and motif.
+6. **Founder story** is missing from `/atelier`; the page is written to read
+   correctly without it and to take a paragraph without restructuring.
 
-6. **The enquiry form has no backend.** `CreateYourSiri.tsx` collects the fields
-   and sets local state; wire it to the studio's endpoint or the WhatsApp
-   Business API.
-
-7. **Copy details are placeholders** — "roughly nine hours of work" and the
-   Bhilwara references should be confirmed by the studio before publishing.
+7. **Typography** uses system stacks only, because this build had no network
+   access to font hosts. A licensed display face can be swapped in by changing
+   `--serif` in `app/globals.css`.
