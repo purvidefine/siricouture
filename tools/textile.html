@@ -1,0 +1,413 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  html, body { margin: 0; padding: 0; background: #000; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+/*
+ * textile.html — the image generator.
+ *
+ * There is no photography available for this project and no way to fetch any,
+ * so the site's imagery is rendered rather than shot. This page draws a piece of
+ * cloth: a real plain weave with per-thread slub, draped with soft folds, lit
+ * from one side, and hand-embroidered with the technique it is asked for.
+ *
+ * It is rendered by Chromium at whatever resolution we ask for, so unlike a
+ * frame-grab it is genuinely sharp at any size.
+ *
+ * Query params:
+ *   w,h     pixel size
+ *   base    cloth colour
+ *   thread  embroidery colour
+ *   work    thread | shisha | zari | sequin | applique | plain
+ *   seed    integer — same seed always draws the same cloth
+ *   scale   weave density multiplier
+ */
+
+const Q = new URLSearchParams(location.search);
+const W = +(Q.get('w') || 1200);
+const H = +(Q.get('h') || 1600);
+const BASE = Q.get('base') || '#C8407E';
+const THREAD = Q.get('thread') || '#F2E4CE';
+const WORK = Q.get('work') || 'thread';
+const SEED = +(Q.get('seed') || 7);
+const SCALE = +(Q.get('scale') || 1);
+
+const cv = document.getElementById('c');
+cv.width = W; cv.height = H;
+const g = cv.getContext('2d');
+
+/* ---------------------------------------------------------------- helpers */
+
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const R = rng(SEED);
+
+function hexToRgb(h) {
+  const n = parseInt(h.replace('#', ''), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const css = (c, alpha) => `rgba(${c.map((v) => Math.round(Math.max(0, Math.min(255, v)))).join(',')},${alpha === undefined ? 1 : alpha})`;
+
+const BASE_RGB = hexToRgb(BASE);
+const THREAD_RGB = hexToRgb(THREAD);
+
+/* smooth value noise, for drape and tonal drift */
+function noiseField(cols, rand) {
+  const grid = [];
+  for (let i = 0; i <= cols; i++) {
+    grid[i] = [];
+    for (let j = 0; j <= cols; j++) grid[i][j] = rand();
+  }
+  const smooth = (t) => t * t * (3 - 2 * t);
+  return (x, y) => {
+    const fx = x * cols, fy = y * cols;
+    const x0 = Math.min(cols - 1, Math.floor(fx)), y0 = Math.min(cols - 1, Math.floor(fy));
+    const tx = smooth(fx - x0), ty = smooth(fy - y0);
+    const a = grid[x0][y0] + (grid[x0 + 1][y0] - grid[x0][y0]) * tx;
+    const b = grid[x0][y0 + 1] + (grid[x0 + 1][y0 + 1] - grid[x0][y0 + 1]) * tx;
+    return a + (b - a) * ty;
+  };
+}
+
+const drape = noiseField(4, rng(SEED + 11));
+const drift = noiseField(9, rng(SEED + 29));
+
+/* ------------------------------------------------------------------ weave */
+
+/*
+ * A real plain weave: warp and weft crossing over and under in a checkerboard.
+ * Every thread gets its own thickness, so the cloth reads as handloom rather
+ * than as a printed grid.
+ */
+function drawWeave() {
+  const pitch = Math.max(3, Math.round((W / 190) * SCALE));
+  const nx = Math.ceil(W / pitch) + 1;
+  const ny = Math.ceil(H / pitch) + 1;
+
+  const warpG = [], weftG = [];
+  for (let i = 0; i < nx; i++) warpG[i] = 0.72 + R() * 0.52;
+  for (let j = 0; j < ny; j++) weftG[j] = 0.72 + R() * 0.52;
+
+  const img = g.createImageData(W, H);
+  const d = img.data;
+
+  for (let y = 0; y < H; y++) {
+    const v = y / H;
+    for (let x = 0; x < W; x++) {
+      const u = x / W;
+
+      const wi = Math.floor(x / pitch), fi = Math.floor(y / pitch);
+      const gw = warpG[wi % nx], gf = weftG[fi % ny];
+
+      // position across each thread's own width
+      const su = ((x % pitch) / pitch) * 2 - 1;
+      const sv = ((y % pitch) / pitch) * 2 - 1;
+
+      const warpP = Math.max(0, 1 - (su * su) / (gw * gw));
+      const weftP = Math.max(0, 1 - (sv * sv) / (gf * gf));
+      const warpH = Math.sqrt(warpP) * gw;
+      const weftH = Math.sqrt(weftP) * gf;
+
+      const warpOver = (wi + fi) % 2 === 0;
+      let h = warpOver ? warpH * 0.66 + weftH * 0.2 : weftH * 0.66 + warpH * 0.2;
+
+      // --- drape: large soft folds running down the cloth
+      const fold =
+        Math.sin(u * 7.5 + drape(u, v) * 5) * 0.5 +
+        Math.sin(u * 3.1 + v * 1.4) * 0.5;
+      const shade = 0.80 + fold * 0.13 + (drape(u, v) - 0.5) * 0.20;
+
+      // --- one soft key light from the upper left, as in a window-lit shot
+      const key = 1.06 - Math.hypot(u - 0.32, v - 0.24) * 0.42;
+
+      const lum = (0.72 + h * 0.5) * shade * key * (0.96 + drift(u, v) * 0.09);
+
+      // threads on top catch a little of the light's own colour
+      const c = mix(BASE_RGB, [255, 246, 232], Math.max(0, (h - 0.55)) * 0.28);
+
+      const i = (y * W + x) * 4;
+      d[i] = c[0] * lum;
+      d[i + 1] = c[1] * lum;
+      d[i + 2] = c[2] * lum;
+      d[i + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+}
+
+/* ------------------------------------------------------------- embroidery */
+
+/*
+ * Stitches are drawn one at a time, each with its own length, angle and
+ * shading — a highlight along the top of the thread and a contact shadow
+ * beneath it, which is what makes worked thread sit *on* cloth rather than
+ * inside it.
+ */
+function stitch(x1, y1, x2, y2, width, colour, rand) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len, ny = dx / len;
+
+  // contact shadow
+  g.strokeStyle = `rgba(0,0,0,0.22)`;
+  g.lineWidth = width * 1.5;
+  g.lineCap = 'round';
+  g.beginPath();
+  g.moveTo(x1 + nx * width * 0.5 + 1, y1 + ny * width * 0.5 + 1.5);
+  g.lineTo(x2 + nx * width * 0.5 + 1, y2 + ny * width * 0.5 + 1.5);
+  g.stroke();
+
+  // body of the thread
+  g.strokeStyle = css(colour);
+  g.lineWidth = width;
+  g.beginPath();
+  g.moveTo(x1, y1);
+  g.lineTo(x2, y2);
+  g.stroke();
+
+  // specular along the crown
+  g.strokeStyle = css(mix(colour, [255, 255, 255], 0.55), 0.55);
+  g.lineWidth = width * 0.34;
+  g.beginPath();
+  g.moveTo(x1 - nx * width * 0.22, y1 - ny * width * 0.22);
+  g.lineTo(x2 - nx * width * 0.22, y2 - ny * width * 0.22);
+  g.stroke();
+}
+
+/** Satin fill: parallel stitches laid across a lobe. */
+function satin(pts, angleDeg, density, colour, width, rand) {
+  const a = (angleDeg * Math.PI) / 180;
+  const dx = Math.cos(a), dy = Math.sin(a);
+  const px = -dy, py = dx;
+  let lo = Infinity, hi = -Infinity;
+  for (const p of pts) {
+    const q = p[0] * px + p[1] * py;
+    if (q < lo) lo = q;
+    if (q > hi) hi = q;
+  }
+  const lines = Math.max(3, Math.round((hi - lo) / density));
+  for (let i = 0; i <= lines; i++) {
+    const off = lo + ((hi - lo) * i) / lines + (rand() - 0.5) * density * 0.35;
+    const hits = [];
+    for (let j = 0; j < pts.length - 1; j++) {
+      const p1 = pts[j], p2 = pts[j + 1];
+      const a1 = p1[0] * px + p1[1] * py, a2 = p2[0] * px + p2[1] * py;
+      if ((a1 - off) * (a2 - off) <= 0 && a1 !== a2) {
+        const f = (off - a1) / (a2 - a1);
+        hits.push((p1[0] + (p2[0] - p1[0]) * f) * dx + (p1[1] + (p2[1] - p1[1]) * f) * dy);
+      }
+    }
+    if (hits.length < 2) continue;
+    hits.sort((m, n) => m - n);
+    const s = hits[0] + (rand() - 0.5) * width;
+    const e = hits[hits.length - 1] + (rand() - 0.5) * width;
+    if (e - s < width) continue;
+    stitch(dx * s + px * off, dy * s + py * off, dx * e + px * off, dy * e + py * off, width, colour, rand);
+  }
+}
+
+function curve(pts, segments) {
+  const out = [], n = pts.length;
+  for (let i = 0; i < segments; i++) {
+    const t = (i / (segments - 1)) * (n - 1);
+    const i0 = Math.floor(t), f = t - i0;
+    const p0 = pts[Math.max(0, i0 - 1)], p1 = pts[i0];
+    const p2 = pts[Math.min(n - 1, i0 + 1)], p3 = pts[Math.min(n - 1, i0 + 2)];
+    const f2 = f * f, f3 = f2 * f;
+    const at = (a, b, c, e) =>
+      0.5 * (2 * b + (-a + c) * f + (2 * a - 5 * b + 4 * c - e) * f2 + (-a + 3 * b - 3 * c + e) * f3);
+    out.push([at(p0[0], p1[0], p2[0], p3[0]), at(p0[1], p1[1], p2[1], p3[1])]);
+  }
+  return out;
+}
+
+/** A buti — stem, two leaves, five petals, a knotted centre. */
+function buti(cx, cy, s, colour, rand) {
+  const w = s * 0.055;
+  const stem = curve([[cx, cy + s * 0.9], [cx + s * 0.03, cy + s * 0.45], [cx + s * 0.07, cy + s * 0.1], [cx + s * 0.02, cy - s * 0.12]], 40);
+  for (let i = 1; i < stem.length; i += 3) {
+    stitch(stem[i - 1][0], stem[i - 1][1], stem[i][0], stem[i][1], w, colour, rand);
+  }
+  const leaf = (sx, sy, ex, ey, side) =>
+    curve([[cx + sx, cy + sy], [cx + sx + side * s * 0.2, cy + sy - s * 0.08],
+           [cx + ex, cy + ey], [cx + ex - side * s * 0.08, cy + ey + s * 0.1],
+           [cx + sx, cy + sy]], 40);
+  satin(leaf(0, s * 0.42, -s * 0.3, s * 0.18, -1), 118, s * 0.048, colour, w, rand);
+  satin(leaf(s * 0.05, s * 0.18, s * 0.34, -s * 0.02, 1), 62, s * 0.048, colour, w, rand);
+
+  const angles = [96, 158, 222, 288, 32];
+  const lens = [0.34, 0.3, 0.32, 0.29, 0.32];
+  angles.forEach((ang, i) => {
+    const a = (ang * Math.PI) / 180;
+    const dx = Math.cos(a), dy = -Math.sin(a);
+    const nx = -dy, ny = dx;
+    const L = s * lens[i], ww = s * 0.1;
+    const outline = curve([
+      [cx, cy - s * 0.2],
+      [cx + dx * L * 0.55 + nx * ww, cy - s * 0.2 + dy * L * 0.55 + ny * ww],
+      [cx + dx * L, cy - s * 0.2 + dy * L],
+      [cx + dx * L * 0.55 - nx * ww, cy - s * 0.2 + dy * L * 0.55 - ny * ww],
+      [cx, cy - s * 0.2],
+    ], 36);
+    satin(outline, ang + 90, s * 0.042, colour, w * 0.92, rand);
+  });
+
+  // french knots at the centre
+  for (let i = 0; i < 9; i++) {
+    const a = rand() * Math.PI * 2, r = s * (0.02 + rand() * 0.05);
+    const kx = cx + Math.cos(a) * r, ky = cy - s * 0.2 + Math.sin(a) * r;
+    const kr = s * (0.016 + rand() * 0.012);
+    g.fillStyle = 'rgba(0,0,0,0.25)';
+    g.beginPath(); g.arc(kx + 1, ky + 1.5, kr, 0, 6.284); g.fill();
+    const grd = g.createRadialGradient(kx - kr * 0.4, ky - kr * 0.4, kr * 0.1, kx, ky, kr);
+    grd.addColorStop(0, css(mix(colour, [255, 255, 255], 0.6)));
+    grd.addColorStop(1, css(colour));
+    g.fillStyle = grd;
+    g.beginPath(); g.arc(kx, ky, kr, 0, 6.284); g.fill();
+  }
+}
+
+/** Shisha — a mirror held by a ring of anchor stitches. */
+function mirror(cx, cy, r, colour, rand) {
+  g.fillStyle = 'rgba(0,0,0,0.28)';
+  g.beginPath(); g.ellipse(cx + 2, cy + 3, r, r, 0, 0, 6.284); g.fill();
+
+  const grd = g.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+  grd.addColorStop(0, '#ffffff');
+  grd.addColorStop(0.35, '#d9dee2');
+  grd.addColorStop(0.6, '#f4f6f7');
+  grd.addColorStop(1, '#a9b2b8');
+  g.fillStyle = grd;
+  g.beginPath(); g.arc(cx, cy, r, 0, 6.284); g.fill();
+
+  const n = 18 + Math.floor(rand() * 6);
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + rand() * 0.08;
+    const i0 = r * (0.86 + rand() * 0.1), o0 = r * (1.24 + rand() * 0.22);
+    stitch(cx + Math.cos(a) * i0, cy + Math.sin(a) * i0,
+           cx + Math.cos(a) * o0, cy + Math.sin(a) * o0, r * 0.14, colour, rand);
+  }
+}
+
+/** A metallic scalloped border with sequins along it. */
+function scallop(y, colour, rand, sequins) {
+  const n = Math.max(3, Math.round(W / (W * 0.17)));
+  const step = W / n;
+  const depth = H * 0.055;
+  for (let i = 0; i < n; i++) {
+    const x0 = i * step, x1 = (i + 1) * step;
+    const mid = (x0 + x1) / 2;
+    const d = depth * (0.85 + rand() * 0.3);
+    const steps = 26;
+    let px = x0, py = y;
+    for (let k = 1; k <= steps; k++) {
+      const t = k / steps;
+      const qx = (1 - t) * (1 - t) * x0 + 2 * (1 - t) * t * mid + t * t * x1;
+      const qy = (1 - t) * (1 - t) * y + 2 * (1 - t) * t * (y + d) + t * t * y;
+      stitch(px, py, qx, qy, W * 0.008, colour, rand);
+      if (sequins && k % 4 === 0) {
+        const sr = W * 0.007;
+        g.fillStyle = 'rgba(0,0,0,0.2)';
+        g.beginPath(); g.arc(qx + 1, qy + 1.5, sr, 0, 6.284); g.fill();
+        const sg = g.createRadialGradient(qx - sr * 0.4, qy - sr * 0.4, 0, qx, qy, sr);
+        sg.addColorStop(0, '#fffdf6');
+        sg.addColorStop(1, css(colour));
+        g.fillStyle = sg;
+        g.beginPath(); g.arc(qx, qy, sr, 0, 6.284); g.fill();
+      }
+      px = qx; py = qy;
+    }
+  }
+}
+
+/** Small cut flowers laid onto the ground and secured at every edge. */
+function applique(rand, colour) {
+  const n = 7;
+  for (let i = 0; i < n; i++) {
+    const cx = W * (0.15 + rand() * 0.7);
+    const cy = H * (0.12 + rand() * 0.76);
+    const s = W * (0.055 + rand() * 0.05);
+    const petals = 5 + Math.floor(rand() * 2);
+    const hue = mix(colour, [255, 255, 255], rand() * 0.4);
+    for (let p = 0; p < petals; p++) {
+      const a = (p / petals) * Math.PI * 2 + rand() * 0.2;
+      const px = cx + Math.cos(a) * s * 0.55, py = cy + Math.sin(a) * s * 0.55;
+      g.fillStyle = 'rgba(0,0,0,0.18)';
+      g.beginPath(); g.ellipse(px + 2, py + 3, s * 0.42, s * 0.3, a, 0, 6.284); g.fill();
+      const pg = g.createLinearGradient(px - s * 0.4, py - s * 0.4, px + s * 0.4, py + s * 0.4);
+      pg.addColorStop(0, css(mix(hue, [255, 255, 255], 0.45)));
+      pg.addColorStop(1, css(hue));
+      g.fillStyle = pg;
+      g.beginPath(); g.ellipse(px, py, s * 0.42, s * 0.3, a, 0, 6.284); g.fill();
+      // the securing stitches around the cut edge
+      for (let k = 0; k < 9; k++) {
+        const ka = (k / 9) * Math.PI * 2;
+        const ex = px + Math.cos(ka) * s * 0.42 * 0.94, ey = py + Math.sin(ka) * s * 0.3 * 0.94;
+        stitch(ex, ey, px + Math.cos(ka) * s * 0.42 * 1.16, py + Math.sin(ka) * s * 0.3 * 1.16,
+               s * 0.05, mix(hue, [90, 70, 50], 0.4), rand);
+      }
+    }
+    const cr = s * 0.16;
+    const cg2 = g.createRadialGradient(cx - cr * 0.4, cy - cr * 0.4, 0, cx, cy, cr);
+    cg2.addColorStop(0, '#fff6d8');
+    cg2.addColorStop(1, '#c9a24e');
+    g.fillStyle = cg2;
+    g.beginPath(); g.arc(cx, cy, cr, 0, 6.284); g.fill();
+  }
+}
+
+/* ------------------------------------------------------------------ draw */
+
+drawWeave();
+
+const rand = rng(SEED + 101);
+const T = THREAD_RGB;
+
+if (WORK === 'thread') {
+  buti(W * 0.5, H * 0.46, Math.min(W, H) * 0.42, T, rand);
+  buti(W * 0.18, H * 0.16, Math.min(W, H) * 0.16, T, rand);
+  buti(W * 0.83, H * 0.8, Math.min(W, H) * 0.17, T, rand);
+} else if (WORK === 'shisha') {
+  const rr = Math.min(W, H) * 0.075;
+  for (let i = 0; i < 5; i++) {
+    mirror(W * (0.16 + i * 0.17), H * (0.42 + Math.sin(i * 1.3) * 0.1), rr * (0.85 + rand() * 0.3), T, rand);
+  }
+  scallop(H * 0.68, hexToRgb('#C9A24E'), rand, true);
+} else if (WORK === 'zari') {
+  scallop(H * 0.3, hexToRgb('#C9A24E'), rand, false);
+  scallop(H * 0.62, hexToRgb('#C9A24E'), rand, false);
+  buti(W * 0.5, H * 0.48, Math.min(W, H) * 0.2, hexToRgb('#C9A24E'), rand);
+} else if (WORK === 'sequin') {
+  scallop(H * 0.42, hexToRgb('#D8CBAA'), rand, true);
+  scallop(H * 0.66, hexToRgb('#D8CBAA'), rand, true);
+} else if (WORK === 'applique') {
+  applique(rand, hexToRgb('#D98BA8'));
+}
+
+/* --- a final soft vignette, as a lens gives */
+const vg = g.createRadialGradient(W * 0.42, H * 0.36, Math.min(W, H) * 0.15, W * 0.5, H * 0.5, Math.max(W, H) * 0.78);
+vg.addColorStop(0, 'rgba(255,252,246,0.10)');
+vg.addColorStop(0.55, 'rgba(0,0,0,0)');
+vg.addColorStop(1, 'rgba(30,22,16,0.30)');
+g.fillStyle = vg;
+g.fillRect(0, 0, W, H);
+
+document.title = 'ready';
+</script>
+</body>
+</html>
