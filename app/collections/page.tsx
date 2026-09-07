@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import PieceCard from '@/components/PieceCard';
-import { Buti, StitchRule } from '@/components/Motif';
+import Reveal from '@/components/Reveal';
 import { COLLECTIONS, OCCASIONS, PIECES } from '@/lib/catalogue';
 
 export const metadata: Metadata = {
@@ -12,18 +12,21 @@ export const metadata: Metadata = {
 /**
  * The catalogue.
  *
- * Grouped by collection rather than paginated, because the whole range is small
- * enough to see at once and grouping is how she talks about the work herself.
+ * One grid rather than six near-empty sections: the range currently runs one
+ * piece per collection, so grouping them into separate blocks left a lonely
+ * card under every heading. Each card still carries its collection name and its
+ * collection's anchor, so links from elsewhere on the site land in the right
+ * place.
  */
 export default function CollectionsPage() {
   return (
     <>
-      <header className="page-head">
+      <header className="wrap page-head">
         <p className="eyebrow">The range</p>
         <h1 className="page-title">Collections</h1>
         <p className="page-lead">
-          Eight pieces across six collections. Every one is made to order, and every one can be
-          remade in your colour and your measurements.
+          Six collections, every piece made to order — and every one able to be remade in your
+          colour and your measurements.
         </p>
         <ul className="occasions" aria-label="Occasions we make for">
           {OCCASIONS.map((o) => (
@@ -32,27 +35,32 @@ export default function CollectionsPage() {
         </ul>
       </header>
 
-      {COLLECTIONS.map((c, ci) => {
-        const pieces = PIECES.filter((p) => p.collection === c.name);
-        if (pieces.length === 0) return null;
-        return (
-          <section key={c.slug} id={c.slug} className="section collection-block">
-            <div className="collection-block__head">
-              <Buti size={58} seed={ci * 9 + 2} />
-              <div>
-                <h2 className="section__title">{c.name}</h2>
-                <p className="section__lead">{c.line}</p>
-              </div>
-            </div>
-            <StitchRule width={1200} seed={ci * 7 + 5} className="section-rule" />
-            <div className="grid">
-              {pieces.map((p, i) => (
-                <PieceCard key={p.slug} piece={p} index={ci * 4 + i} />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+      <section className="wrap section" style={{ paddingTop: 0 }}>
+        <div className="grid">
+          {PIECES.map((p, i) => {
+            const collection = COLLECTIONS.find((c) => c.name === p.collection);
+            return (
+              <PieceCard key={p.slug} piece={p} index={i} showCollection id={collection?.slug} />
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="wrap section">
+        <Reveal className="head">
+          <p className="eyebrow">The collections</p>
+          <h2 className="head__title">What each one is for.</h2>
+        </Reveal>
+        <ol className="steps">
+          {COLLECTIONS.map((c, i) => (
+            <Reveal as="li" className="step" key={c.slug} delay={i * 50}>
+              <span className="step__n">{String(i + 1).padStart(2, '0')}</span>
+              <h3 className="step__t">{c.name}</h3>
+              <p className="step__d">{c.line}</p>
+            </Reveal>
+          ))}
+        </ol>
+      </section>
     </>
   );
 }

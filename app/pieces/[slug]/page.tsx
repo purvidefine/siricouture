@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import Frame from '@/components/Frame';
+import Figure from '@/components/Figure';
 import PieceCard from '@/components/PieceCard';
-import { Buti, Scallop, StitchRule } from '@/components/Motif';
+import Reveal from '@/components/Reveal';
 import { enquiryHref } from '@/lib/enquiry';
 import { PIECES, TECHNIQUE_BY_ID, pieceBySlug } from '@/lib/catalogue';
 
@@ -24,7 +24,7 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
  * A single piece.
  *
  * No cart. The action is an enquiry, pre-filled with the piece name so the
- * studio knows what the message is about before they open it — which is how
+ * studio knows what the message is about before opening it — which is how
  * made-to-order actually sells at this price point.
  */
 export default function PiecePage({ params }: { params: { slug: string } }) {
@@ -37,27 +37,30 @@ export default function PiecePage({ params }: { params: { slug: string } }) {
 
   return (
     <>
-      <article className="piece">
+      <article className="wrap piece">
         <div className="piece__gallery">
-          <Frame
-            tint={piece.tint}
-            ratio="3/4"
-            seed={3}
-            feature
-            src={piece.images[0]}
-            alt={`${piece.name} — ${piece.type}`}
-          />
+          <Reveal image>
+            <Figure
+              src={piece.images[0]}
+              alt={`${piece.name} — ${piece.type}`}
+              ratio={piece.ratio}
+              sizes="(max-width: 1000px) 100vw, 58vw"
+              priority
+              pending={`${piece.name} — full-length`}
+            />
+          </Reveal>
+
           {piece.images.length > 1 && (
             <div className="piece__thumbs">
               {piece.images.slice(1).map((src, i) => (
-                <Frame
-                  key={src}
-                  tint={piece.tint}
-                  ratio="3/4"
-                  seed={11 + i * 8}
-                  src={src}
-                  alt={`${piece.name}, view ${i + 2}`}
-                />
+                <Reveal key={src} image delay={i * 70}>
+                  <Figure
+                    src={src}
+                    alt={`${piece.name}, view ${i + 2}`}
+                    ratio="3/4"
+                    sizes="(max-width: 1000px) 50vw, 29vw"
+                  />
+                </Reveal>
               ))}
             </div>
           )}
@@ -69,11 +72,12 @@ export default function PiecePage({ params }: { params: { slug: string } }) {
               {piece.collection}
             </Link>
           </p>
-          <h1 className="page-title">{piece.name}</h1>
-          <Scallop width={280} seed={7} className="piece__scallop" />
+          <h1 className="page-title" style={{ marginTop: '0.6rem' }}>
+            {piece.name}
+          </h1>
           <p className="piece__note">{piece.note}</p>
 
-          <dl className="spec spec--stacked">
+          <dl className="spec">
             <div>
               <dt>Silhouette</dt>
               <dd>{piece.type}</dd>
@@ -95,13 +99,8 @@ export default function PiecePage({ params }: { params: { slug: string } }) {
             </div>
           </dl>
 
-          <StitchRule width={420} seed={31} className="piece__rule" />
-
           <section className="piece__work">
-            <h2 className="piece__workTitle">
-              <Buti size={38} seed={4} showCentre={false} />
-              The handwork on this piece
-            </h2>
+            <p className="eyebrow">The handwork on this piece</p>
             <ul>
               {piece.techniques.map((t) => {
                 const info = TECHNIQUE_BY_ID[t];
@@ -109,58 +108,49 @@ export default function PiecePage({ params }: { params: { slug: string } }) {
                   <li key={t}>
                     <Link href={`/handwork#${t}`}>
                       <strong>{info.name}</strong>
-                      <span className="piece__local">{info.local}</span>
                     </Link>
-                    <p>{info.line}</p>
-                    <span className="piece__hours">{info.hours}</span>
+                    <p style={{ color: 'var(--ink-2)' }}>{info.line}</p>
+                    <span className="piece__hours">
+                      {info.local} · {info.hours}
+                    </span>
                   </li>
                 );
               })}
             </ul>
-
-            <div className="piece__macros">
-              {piece.techniques.map((t) => (
-                <figure key={t}>
-                  <Frame
-                    ratio="1/1"
-                    src={TECHNIQUE_BY_ID[t].image}
-                    alt={`${TECHNIQUE_BY_ID[t].name} on a Siri Couture piece`}
-                  />
-                  <figcaption>{TECHNIQUE_BY_ID[t].local}</figcaption>
-                </figure>
-              ))}
-            </div>
           </section>
 
           <div className="piece__actions">
             <a
               className="btn btn--solid"
               href={enquiryHref(
-                `Hello Siri Couture — I am interested in ${piece.name} (${piece.type}). Could you tell me about availability and making it to my measurements?`
+                `Hello Siri Couture — I am interested in ${piece.name} (${piece.type}). Could you tell me about making it to my measurements?`
               )}
             >
               Enquire about this piece
             </a>
-            <Link className="btn btn--line" href="/commission">
+            <Link className="btn" href="/commission">
               Commission something like it
             </Link>
           </div>
 
-          <p className="piece__made">
-            Made to order in Bhilwara. Tell us your measurements and your occasion date — we will
-            tell you honestly whether we can make it in time.
+          <p className="form__note" style={{ marginTop: '1.4rem' }}>
+            Made to order in Bhilwara. Tell us your measurements and your occasion date and we will
+            say honestly whether we can make it in time.
           </p>
         </div>
       </article>
 
       {related.length > 0 && (
-        <section className="section">
-          <div className="section__head section__head--row">
-            <h2 className="section__title">Worked in the same techniques</h2>
+        <section className="wrap section">
+          <div className="head head--split">
+            <h2 className="head__title">Worked in the same techniques</h2>
+            <Link className="link" href="/collections">
+              All pieces
+            </Link>
           </div>
           <div className="grid">
             {related.map((p, i) => (
-              <PieceCard key={p.slug} piece={p} index={i + 5} />
+              <PieceCard key={p.slug} piece={p} index={i} />
             ))}
           </div>
         </section>
